@@ -12,6 +12,7 @@ __version__ = version("sphinx-kroki")
 
 
 def setup(app: Sphinx) -> dict[str, Any]:
+    """Register the Kroki extension with Sphinx."""
     app.add_directive("kroki", Kroki)
     app.add_transform(KrokiToImageTransform)
     app.add_config_value("kroki_url", "https://kroki.io", "env")

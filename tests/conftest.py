@@ -1,5 +1,7 @@
+import base64
 import os
 import shutil
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 
 import docutils
@@ -8,15 +10,55 @@ import sphinx
 from _pytest.config import Config
 from _pytest.main import Session
 
+from sphinx_kroki import kroki as kroki_module
+
 pytest_plugins = "sphinx.testing.fixtures"
 
 # Exclude 'fixtures' dirs for pytest test collector
 collect_ignore = ["fixtures"]
 
+_PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WHZ"
+    "xQAAAABJRU5ErkJggg=="
+)
+
+
+class _MockKrokiResponse:
+    def __init__(self, content: bytes) -> None:
+        self._content = content
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def iter_content(self, chunk_size: int = 1) -> Iterator[bytes]:
+        for index in range(0, len(self._content), chunk_size):
+            yield self._content[index : index + chunk_size]
+
+
+def _rendered_diagram(payload: Mapping[str, object]) -> bytes:
+    if payload["output_format"] == "png":
+        return _PNG_BYTES
+
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg">'
+        f"<title>{payload['diagram_type']}</title>"
+        "</svg>"
+    ).encode()
+
 
 @pytest.fixture(scope="session")
 def rootdir() -> Path:
     return Path(__file__).parent.resolve() / "fixtures"
+
+
+@pytest.fixture(autouse=True)
+def mock_kroki_requests(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_post(
+        _url: str, *, json: Mapping[str, object], **_kwargs: object
+    ) -> _MockKrokiResponse:
+        return _MockKrokiResponse(_rendered_diagram(json))
+
+    monkeypatch.setattr(kroki_module.requests, "post", fake_post)
 
 
 def pytest_report_header(config: Config) -> str:
