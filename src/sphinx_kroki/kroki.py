@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from hashlib import sha1
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING, ClassVar, cast
 
 import requests
@@ -301,18 +302,8 @@ def render_kroki(
 ) -> Path:
     """Render a Kroki diagram and cache it under the Sphinx output directory."""
     kroki_url: str = builder.config.kroki_url
-    diagram_options = cast("dict[str, object]", node.get("options", {}))
-    payload: dict[str, str | dict[str, object]] = {
-        "diagram_source": cast("str", node["source"]),
-        "diagram_type": cast("str", node["type"]),
-        "diagram_options": diagram_options,
-        "output_format": output_format,
-    }
-
-    hashkey = (str(kroki_url) + str(payload)).encode()
-    digest = sha1(hashkey, usedforsecurity=False).hexdigest()
-    fname = f"{prefix}-{digest}.{output_format}"
-    outfn = Path(builder.outdir).joinpath(builder.imagedir, fname)
+    payload = _render_payload(node, output_format)
+    outfn = _render_output_path(builder, kroki_url, payload, output_format, prefix)
 
     if outfn.is_file():
         return outfn
@@ -322,12 +313,56 @@ def render_kroki(
 
         response = requests.post(kroki_url, json=payload, stream=True, timeout=30)
         response.raise_for_status()
-        with outfn.open(mode="wb") as f:
-            for chunk in response.iter_content(chunk_size=128):
-                f.write(chunk)
+        _write_rendered_diagram(outfn, response)
     except requests.exceptions.RequestException as e:
         raise KrokiError(__("kroki did not produce a diagram")) from e
     except OSError as e:
         raise KrokiError(__("Unable to write diagram to file %r") % outfn) from e
     else:
         return outfn
+
+
+def _render_payload(
+    node: KrokiNode, output_format: str
+) -> dict[str, str | dict[str, object]]:
+    diagram_options = cast("dict[str, object]", node.get("options", {}))
+    return {
+        "diagram_source": cast("str", node["source"]),
+        "diagram_type": cast("str", node["type"]),
+        "diagram_options": diagram_options,
+        "output_format": output_format,
+    }
+
+
+def _render_output_path(
+    builder: Builder,
+    kroki_url: str,
+    payload: dict[str, str | dict[str, object]],
+    output_format: str,
+    prefix: str,
+) -> Path:
+    hashkey = (kroki_url + str(payload)).encode()
+    digest = sha1(hashkey, usedforsecurity=False).hexdigest()
+    fname = f"{prefix}-{digest}.{output_format}"
+    return Path(builder.outdir).joinpath(builder.imagedir, fname)
+
+
+def _write_rendered_diagram(outfn: Path, response: requests.Response) -> None:
+    temp_path: Path | None = None
+    try:
+        with NamedTemporaryFile(
+            mode="wb",
+            dir=outfn.parent,
+            prefix=f".{outfn.stem}-",
+            suffix=outfn.suffix,
+            delete=False,
+        ) as temp_file:
+            temp_path = Path(temp_file.name)
+            for chunk in response.iter_content(chunk_size=128):
+                temp_file.write(chunk)
+
+        temp_path.replace(outfn)
+    except (OSError, requests.exceptions.RequestException):
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+        raise
