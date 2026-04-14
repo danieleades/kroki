@@ -1,11 +1,11 @@
 import os
 import shutil
+from pathlib import Path
 
 import docutils
 import pytest
 
 import sphinx
-from sphinx.testing.path import path
 
 pytest_plugins = "sphinx.testing.fixtures"
 
@@ -15,7 +15,7 @@ collect_ignore = ["fixtures"]
 
 @pytest.fixture(scope="session")
 def rootdir():
-    return path(__file__).parent.abspath() / "fixtures"
+    return Path(__file__).parent.resolve() / "fixtures"
 
 
 def pytest_report_header(config):

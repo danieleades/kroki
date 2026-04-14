@@ -1,0 +1,45 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
+  ],
+  automerge: true,
+  enabledManagers: [
+    'pep621',
+    'custom.regex',
+    'github-actions',
+  ],
+  vulnerabilityAlerts: {
+    enabled: true,
+  },
+  osvVulnerabilityAlerts: true,
+  packageRules: [
+    {
+      matchUpdateTypes: [
+        'security',
+      ],
+      schedule: [
+        'at any time',
+      ],
+    },
+  ],
+  lockFileMaintenance: {
+    enabled: true,
+    schedule: [
+      'before 5am on the first day of the month',
+    ],
+  },
+  customManagers: [
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/^\\.github/workflows/.*\\.ya?ml$/',
+      ],
+      matchStrings: [
+        'UV_VERSION:\\s*[\'"]?(?<currentValue>\\d+\\.\\d+\\.\\d+)[\'"]?',
+      ],
+      datasourceTemplate: 'pypi',
+      depNameTemplate: 'uv',
+    },
+  ],
+}

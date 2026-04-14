@@ -1,2 +1,2 @@
-extensions = ["sphinxcontrib.kroki"]
+extensions = ["sphinx_kroki"]
 exclude_patterns = ["_build"]

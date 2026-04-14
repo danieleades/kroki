@@ -65,7 +65,7 @@ extension_type_map = {
 
 
 def type_spec(argument: Any) -> str:
-    return directives.choice(argument, types.keys())
+    return directives.choice(argument, tuple(types.keys()))
 
 
 def format_spec(argument: Any) -> str:
@@ -121,8 +121,8 @@ class Kroki(SphinxDirective):
                 return [
                     document.reporter.warning(
                         __(
-                            "Kroki directive cannot have both filename option and "
-                            "a filename argument"
+                            "Kroki directive cannot have both "
+                            "filename option and a filename argument"
                         ),
                         line=self.lineno,
                     )
@@ -163,8 +163,9 @@ class Kroki(SphinxDirective):
             return [
                 document.reporter.warning(
                     __(
-                        "Ignoring kroki directive without content. It is necessary to specify "
-                        "filename argument/option or content"
+                        "Ignoring kroki directive without content. "
+                        "It is necessary to specify filename "
+                        "argument/option or content"
                     ),
                     line=self.lineno,
                 )
@@ -203,8 +204,8 @@ class Kroki(SphinxDirective):
                 return [
                     document.reporter.warning(
                         __(
-                            "Kroki directive cannot have both format option and "
-                            "a format argument"
+                            "Kroki directive cannot have both "
+                            "format option and a format argument"
                         ),
                         line=self.lineno,
                     )
@@ -234,7 +235,9 @@ class Kroki(SphinxDirective):
             return [node]
         else:
             node["caption"] = self.options["caption"]
-            figure = figure_wrapper(self, node, node["caption"])
+            figure = figure_wrapper(
+                self, node, node["caption"]  # type: ignore[arg-type]
+            )
             figure["classes"] = classes
             self.add_name(figure)
             return [figure]
