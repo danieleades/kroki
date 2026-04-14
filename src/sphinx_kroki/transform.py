@@ -24,7 +24,7 @@ class KrokiToImageTransform(SphinxTransform):
 
     @property
     def _builder(self) -> Builder:
-        return self.env._app.builder  # noqa: SLF001
+        return self.app.builder
 
     def apply(self, **_kwargs: object) -> None:
         """Replace each Kroki node in the document with an image node."""
