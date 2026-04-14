@@ -30,8 +30,7 @@ Homepage = "https://github.com/sphinx-contrib/kroki"
 
 [dependency-groups]
 dev = [
-    "black",
-    "flake8",
+    "ruff",
     "mypy",
     "coverage",
     "pytest",
@@ -41,5 +40,76 @@ dev = [
     "types-docutils",
 ]
 
-[tool.black]
-line-length = 79
+[tool.mypy]
+files = ["src", "tests"]
+
+[tool.ruff]
+lint.select = [
+    "A",      # flake8-builtins
+    "ANN",    # flake8-annotations
+    "ARG",    # flake8-unused-arguments
+    "ASYNC",  # flake8-async
+    "B",      # flake8-bugbear
+    "BLE",    # flake8-blind-except
+    "C4",     # flake8-comprehensions
+    "C90",    # cognitive complexity
+    "COM",    # flake8-commas
+    "D",      # pydocstyle
+    "DTZ",    # flake8-datetimez
+    "E",      # flake8 built-ins
+    "EM",     # flake8-errmsg
+    "ERA",    # flake8-eradicate
+    "EXE",    # flake8-executable
+    "F",      # flake8 built-ins
+    "FA",     # flake8-future-annotations
+    "FBT",    # boolean trap
+    "FLY",    # flynt
+    "FURB",   # refurb
+    "G",      # flake8-logging-format
+    "I",      # isort
+    "ICN",    # flake8-import-conventions
+    "INT",    # flake8-gettext
+    "ISC",    # implicit-str-concat
+    "LOG",    # flake8-logging
+    "N",      # pep8-naming
+    "PERF",   # perflint
+    "PGH",    # pygrep-hooks
+    "PIE",    # flake8-pie
+    "PL",     # pylint
+    "PT",     # flake8-pytest-style
+    "PTH",    # flake8-use-pathlib
+    "PYI",    # flake8-pyi
+    "Q",      # flake8-quotes
+    "RET",    # flake8-return
+    "RSE",    # flake8-raise
+    "RUF",    # Ruff-specific lints
+    "S",      # flake8-bandit
+    "SIM",    # flake8-simplify
+    "SLF",    # flake8-self
+    "SLOT",   # flake8-slots
+    "T20",    # flake8-print
+    "TCH",    # flake8-type-checking
+    "TID252", # ban relative imports
+    "TRY",    # tryceratops
+    "UP",     # pyupgrade
+    "W",      # flake8 built-ins
+    "YTT",    # flake8-2020
+]
+lint.ignore = [
+    "COM812", # ignore when using ruff-format
+    "G004",   # Logging statement uses f-string
+    "ISC001", # ignore when using ruff-format
+]
+
+lint.pydocstyle.convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "D100", # missing docstring in public module
+    "D103", # missing docstring in public function
+    "D104", # missing docstring in public package
+    "S101", # use of 'assert' detected
+]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:"]
