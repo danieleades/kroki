@@ -235,7 +235,9 @@ class Kroki(SphinxDirective):
             return [node]
         else:
             node["caption"] = self.options["caption"]
-            figure = figure_wrapper(self, node, node["caption"])  # type: ignore[arg-type]
+            figure = figure_wrapper(
+                self, node, node["caption"]  # type: ignore[arg-type]
+            )
             figure["classes"] = classes
             self.add_name(figure)
             return [figure]
