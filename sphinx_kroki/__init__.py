@@ -1,18 +1,12 @@
-"""
-    sphinxcontrib.kroki
-    ~~~~~~~~~~~~~~~~~~~~~
-    Embed PlantUML, DOT, etc. diagrams in your documentation using Kroki.
-    :copyright: Copyright 2020 by Martin Hasoň <martin.hason@gmail.com>
-    :license: MIT, see LICENSE for details.
-"""
+"""sphinxcontrib_kroki — embed diagrams via Kroki in Sphinx docs."""
 
 from typing import Any, Dict
 from sphinx.application import Sphinx
+from importlib.metadata import version
 from .kroki import Kroki
 from .transform import KrokiToImageTransform
-import pkg_resources
 
-__version__ = pkg_resources.get_distribution("sphinxcontrib-kroki").version
+__version__ = version("sphinx-kroki")
 
 
 def setup(app: Sphinx) -> Dict[str, Any]:

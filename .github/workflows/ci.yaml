@@ -1,0 +1,99 @@
+name: CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+env:
+  UV_VERSION: 0.10.9  # Pin the version of UV
+
+jobs:
+  tests:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        sphinx-version: ["7.0", "8.0", "9.0"]
+        include:
+          - os: "windows-latest"
+            python-version: "3.13"
+            sphinx-version: "9.0"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+      - name: Run Tests
+        run: uv run --frozen --python ${{ matrix.python-version }} --with "sphinx~=${{ matrix.sphinx-version }}" pytest
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv run --frozen black --check sphinx_kroki tests
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv run --frozen flake8 sphinx_kroki tests
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv run --frozen mypy sphinx_kroki
+
+  # coverage:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #     - uses: astral-sh/setup-uv@v7
+  #       with:
+  #         version: ${{ env.UV_VERSION }}
+  #     - name: Collect coverage
+  #       run: uv run --frozen pytest --cov=sphinx_kroki --cov-report=xml
+  #     - name: Upload coverage to Codecov
+  #       uses: codecov/codecov-action@v5
+  #       with:
+  #         files: coverage.xml
+  #       env:
+  #         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-summary:
+    name: CI Summary
+    if: always()
+    needs: [tests, format, lint, type-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any required job failed
+        run: |
+          results=(
+            "${{ needs.tests.result }}"
+            "${{ needs.format.result }}"
+            "${{ needs.lint.result }}"
+            "${{ needs.type-check.result }}"
+          )
+          for r in "${results[@]}"; do
+            if [[ "$r" != "success" ]]; then
+              echo "Failing because a required job did not succeed: $r"
+              exit 1
+            fi
+          done

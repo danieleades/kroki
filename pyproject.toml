@@ -1,32 +1,44 @@
 [build-system]
-requires = ["setuptools", "flit_core >=2,<4"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.flit.metadata]
-module = "sphinxcontrib-kroki"
-author = "Martin Hasoň"
-author-email = "martin.hason@gmail.com"
-home-page = "https://github.com/sphinx-contrib/kroki"
-description-file = "README.md"
-classifiers = ["License :: OSI Approved :: MIT License"]
-requires-python = ">=3.6"
-requires = [
+[project]
+name = "sphinx-kroki"
+version = "1.3.0"
+description = "Kroki integration into sphinx"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "Martin Hasoň", email = "martin.hason@gmail.com" },
+    { name = "Daniel Eades", email = "danieleades@hotmail.com" },
+]
+classifiers = [
+    "Framework :: Sphinx :: Extension",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
     "sphinx",
     "requests>=2.4.2",
+    "pyyaml",
 ]
 
-[tool.flit.metadata.requires-extra]
-code = ["black", "flake8", "mypy"]
-test = [
+[project.urls]
+Homepage = "https://github.com/sphinx-contrib/kroki"
+
+[dependency-groups]
+dev = [
+    "black",
+    "flake8",
+    "mypy",
     "coverage",
     "pytest",
     "pytest-cov",
-]
-extra = []
-
-[tool.pytest.ini_options]
-markers = [
-    "sphinx: run test in sphinx project",
+    "types-requests",
+    "types-PyYAML",
+    "types-docutils",
 ]
 
 [tool.black]
