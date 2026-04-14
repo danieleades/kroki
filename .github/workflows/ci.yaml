@@ -48,7 +48,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
-      - run: uv run --frozen ruff format --check sphinx_kroki tests
+      - run: uv run --frozen ruff format --check .
 
   lint:
     name: Lint
@@ -58,7 +58,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
-      - run: uv run --frozen ruff check sphinx_kroki tests
+      - run: uv run --frozen ruff check .
 
   type-check:
     name: Type Check
@@ -68,7 +68,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
-      - run: uv run --frozen mypy sphinx_kroki
+      - run: uv run --frozen mypy
 
   # coverage:
   #   runs-on: ubuntu-latest
