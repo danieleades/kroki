@@ -1,19 +1,20 @@
-from typing import Any
+from os.path import relpath
 from pathlib import Path
-from os.path import relpath, dirname
-from docutils.nodes import image, SkipNode
+from typing import Any
 
-from .util import logger
-from .kroki import kroki, render_kroki, KrokiError
-from sphinx.transforms import SphinxTransform
+from docutils.nodes import SkipNode, image
 from sphinx.locale import __
+from sphinx.transforms import SphinxTransform
+
+from .kroki import KrokiError, kroki, render_kroki
+from .util import logger
 
 
 class KrokiToImageTransform(SphinxTransform):
     default_priority = 10
 
     def apply(self, **kwargs: Any) -> None:
-        source = dirname(self.document["source"])
+        source = str(Path(self.document["source"]).parent)
         for node in self.document.traverse(kroki):
             img = image()
             img["kroki"] = node
@@ -38,7 +39,7 @@ class KrokiToImageTransform(SphinxTransform):
         output_format = self.output_format(node)
         diagram_type = node["type"]
         diagram_source = node["source"]
-        diagram_options = node["options"] if "options" in node else {}
+        diagram_options: dict[str, Any] = node.get("options", {})
 
         try:
             out = render_kroki(

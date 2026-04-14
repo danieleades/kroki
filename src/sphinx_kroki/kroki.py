@@ -1,18 +1,23 @@
+from __future__ import annotations
+
 from hashlib import sha1
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import requests
 import yaml
-
+from docutils import nodes
 from docutils.nodes import Element, General, Inline, Node
 from docutils.parsers.rst import directives
-from sphinx.builders import Builder
 from sphinx.errors import SphinxError
-from sphinx.ext.graphviz import align_spec, figure_wrapper
+from sphinx.ext.graphviz import align_spec
 from sphinx.locale import __
 from sphinx.util.docutils import SphinxDirective
 from sphinx.util.i18n import search_image_for_language
+from sphinx.util.nodes import set_source_info
+
+if TYPE_CHECKING:
+    from sphinx.builders import Builder
 
 formats = ("png", "svg", "jpeg", "base64", "txt", "utxt")
 
@@ -81,15 +86,13 @@ class kroki(General, Inline, Element):
 
 
 class Kroki(SphinxDirective):
-    """
-    Directive to insert arbitrary kroki markup.
-    """
+    """Directive to insert arbitrary kroki markup."""
 
     has_content = True
     required_arguments = 0
     optional_arguments = 3
     final_argument_whitespace = False
-    option_spec = {
+    option_spec: ClassVar = {
         "align": align_spec,
         "caption": directives.unchanged,
         "class": directives.class_option,
@@ -100,13 +103,13 @@ class Kroki(SphinxDirective):
         "type": type_spec,
     }
 
-    def run(self) -> List[Node]:
+    def run(self) -> list[Node]:
         document = self.state.document
         source: str = "\n".join(self.content)
-        filename: Optional[str] = None
-        diagram_type: Optional[str] = None
-        output_format: Optional[str] = None
-        diagram_options: Optional[Dict] = None
+        filename: str | None = None
+        diagram_type: str | None = None
+        output_format: str | None = None
+        diagram_options: dict | None = None
 
         for argument in self.arguments:
             if argument in types:
@@ -145,15 +148,12 @@ class Kroki(SphinxDirective):
             rel_filename, filename = self.env.relfn2path(argument)
             self.env.note_dependency(rel_filename)
             try:
-                with open(filename, encoding="utf-8") as fp:
+                with Path(filename).open(encoding="utf-8") as fp:
                     source = fp.read()
             except OSError:
                 return [
                     document.reporter.warning(
-                        __(
-                            "External kroki file %r not found or reading "
-                            "it failed"
-                        )
+                        __("External kroki file %r not found or reading it failed")
                         % filename,
                         line=self.lineno,
                     )
@@ -187,9 +187,7 @@ class Kroki(SphinxDirective):
         if diagram_type is None:
             if filename is not None:
                 suffix = Path(filename).suffix.lstrip(".")
-                diagram_type = extension_type_map.get(
-                    suffix, types.get(suffix)
-                )
+                diagram_type = extension_type_map.get(suffix, types.get(suffix))
 
             if diagram_type is None:
                 return [
@@ -225,7 +223,7 @@ class Kroki(SphinxDirective):
         if diagram_options is not None:
             node["options"] = diagram_options
 
-        classes = ["kroki", "kroki-{}".format(diagram_type)]
+        classes = ["kroki", f"kroki-{diagram_type}"]
         node["classes"] = classes + self.options.get("class", [])
         if "align" in self.options:
             node["align"] = self.options["align"]
@@ -233,14 +231,19 @@ class Kroki(SphinxDirective):
         if "caption" not in self.options:
             self.add_name(node)
             return [node]
-        else:
-            node["caption"] = self.options["caption"]
-            figure = figure_wrapper(
-                self, node, node["caption"]  # type: ignore[arg-type]
-            )
-            figure["classes"] = classes
-            self.add_name(figure)
-            return [figure]
+        caption = self.options["caption"]
+        node["caption"] = caption
+        figure = nodes.figure("", node)
+        if "align" in node:
+            figure["align"] = node.attributes.pop("align")
+        inodes, messages = self.parse_inline(caption)
+        caption_node = nodes.caption(caption, "", *inodes)
+        caption_node.extend(messages)
+        set_source_info(self, caption_node)
+        figure += caption_node
+        figure["classes"] = classes
+        self.add_name(figure)
+        return [figure]
 
 
 def render_kroki(
@@ -248,11 +251,13 @@ def render_kroki(
     diagram_type: str,
     diagram_source: str,
     output_format: str,
-    diagram_options: Dict[str, Any] = {},
+    diagram_options: dict[str, Any] | None = None,
     prefix: str = "kroki",
 ) -> Path:
+    if diagram_options is None:
+        diagram_options = {}
     kroki_url: str = builder.config.kroki_url
-    payload: Dict[str, Union[str, Dict]] = {
+    payload: dict[str, str | dict] = {
         "diagram_source": diagram_source,
         "diagram_type": diagram_type,
         "diagram_options": diagram_options,
@@ -260,7 +265,8 @@ def render_kroki(
     }
 
     hashkey = (str(kroki_url) + str(payload)).encode()
-    fname = "%s-%s.%s" % (prefix, sha1(hashkey).hexdigest(), output_format)
+    digest = sha1(hashkey, usedforsecurity=False).hexdigest()
+    fname = f"{prefix}-{digest}.{output_format}"
     outfn = Path(builder.outdir).joinpath(builder.imagedir, fname)
 
     if outfn.is_file():
@@ -269,16 +275,14 @@ def render_kroki(
     try:
         outfn.parent.mkdir(parents=True, exist_ok=True)
 
-        response = requests.post(kroki_url, json=payload, stream=True)
+        response = requests.post(kroki_url, json=payload, stream=True, timeout=30)
         response.raise_for_status()
         with outfn.open(mode="wb") as f:
             for chunk in response.iter_content(chunk_size=128):
                 f.write(chunk)
-
-        return outfn
     except requests.exceptions.RequestException as e:
         raise KrokiError(__("kroki did not produce a diagram")) from e
-    except IOError as e:
-        raise KrokiError(
-            __("Unable to write diagram to file %r") % outfn
-        ) from e
+    except OSError as e:
+        raise KrokiError(__("Unable to write diagram to file %r") % outfn) from e
+    else:
+        return outfn

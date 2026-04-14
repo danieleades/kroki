@@ -1,10 +1,7 @@
-"""
-test_kroki
-~~~~~~~~~~~~~~~~
-Test the kroki extension.
-"""
+"""Test the kroki extension."""
 
 import re
+
 import pytest
 import sphinx
 from sphinx.application import Sphinx
@@ -17,39 +14,37 @@ def get_content(app: Sphinx) -> str:
     return index.read_text()
 
 
-@pytest.mark.sphinx(
-    "html", testroot="kroki", confoverrides={"master_doc": "index"}
-)
-def test_kroki_html(app):
+@pytest.mark.sphinx("html", testroot="kroki", confoverrides={"master_doc": "index"})
+def test_kroki_html(app: Sphinx) -> None:
     content = get_content(app)
     html = (
         r'figure[^>]*?(?:kroki kroki-plantuml align-default)?" .*?>\s*'
         r'<img alt="bar -&gt; baz" class="kroki kroki-plantuml" .+?/>.*?'
         r'<span class="caption-text">caption of diagram</span>.*?</p>'
     )
-    assert re.search(html, content, re.S)
+    assert re.search(html, content, re.DOTALL)
 
     html = (
         r'<p>Hello <img alt="bar -&gt; baz" '
         r'class="kroki kroki-plantuml" .*?/> kroki world</p>'
     )
-    assert re.search(html, content, re.S)
+    assert re.search(html, content, re.DOTALL)
 
     html = r'<img .+?class="kroki kroki-mermaid graph" .+?/>'
-    assert re.search(html, content, re.S)
+    assert re.search(html, content, re.DOTALL)
 
     html = r'<img .+?class="kroki kroki-graphviz" .*?/>'
-    assert re.search(html, content, re.S)
+    assert re.search(html, content, re.DOTALL)
 
     html = (
         r'figure[^>]*?kroki kroki-plantuml align-center" .*?>\s*?'
         r'<img alt="foo -&gt; bar ".*?/>.*?'
         r'<span class="caption-text">on <em>center</em></span>'
     )
-    assert re.search(html, content, re.S)
+    assert re.search(html, content, re.DOTALL)
 
     if sphinx.version_info >= (9, 0):
         html = r'<img.*?class="align-right kroki kroki-ditaa".*?/>'
     else:
         html = r'<img.*?class="kroki kroki-ditaa align-right".*?/>'
-    assert re.search(html, content, re.S)
+    assert re.search(html, content, re.DOTALL)
