@@ -85,7 +85,6 @@ Configuration
 
 - `kroki_url` (default https://kroki.io).
 - `kroki_output_format` (default svg).
-- `kroki_inline_svg` (dafault False).
 
 Alternatives
 ------------
