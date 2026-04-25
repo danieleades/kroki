@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from hashlib import sha1
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -161,9 +162,6 @@ class Kroki(SphinxDirective):
         return filename, diagram_type, output_format
 
     def _resolve_filename(self, filename: str | None) -> tuple[str | None, Node | None]:
-        if "filename" not in self.options:
-            return filename, None
-
         if "filename" in self.options:
             if filename is not None:
                 return None, self._warning(
@@ -171,7 +169,6 @@ class Kroki(SphinxDirective):
                     "filename argument"
                 )
             filename = cast("str", self.options["filename"])
-
         return filename, None
 
     def _resolve_source(
@@ -205,19 +202,12 @@ class Kroki(SphinxDirective):
                     "Kroki directive cannot have both type option and a type argument"
                 )
             diagram_type = types[cast("str", self.options["type"])]
-
-        if diagram_type is not None:
-            return diagram_type, None
+        elif diagram_type is None and filename is not None:
+            suffix = Path(filename).suffix.lstrip(".")
+            diagram_type = extension_type_map.get(suffix, types.get(suffix))
 
         if diagram_type is None:
-            if filename is not None:
-                suffix = Path(filename).suffix.lstrip(".")
-                diagram_type = extension_type_map.get(suffix, types.get(suffix))
-
-            if diagram_type is None:
-                return None, self._warning(
-                    "Kroki directive has to define diagram type."
-                )
+            return None, self._warning("Kroki directive has to define diagram type.")
 
         return diagram_type, None
 
@@ -341,7 +331,7 @@ def _render_output_path(
     output_format: str,
     prefix: str,
 ) -> Path:
-    hashkey = (kroki_url + str(payload)).encode()
+    hashkey = (kroki_url + json.dumps(payload, sort_keys=True)).encode()
     digest = sha1(hashkey, usedforsecurity=False).hexdigest()
     fname = f"{prefix}-{digest}.{output_format}"
     return Path(builder.outdir).joinpath(builder.imagedir, fname)
@@ -358,7 +348,7 @@ def _write_rendered_diagram(outfn: Path, response: requests.Response) -> None:
             delete=False,
         ) as temp_file:
             temp_path = Path(temp_file.name)
-            for chunk in response.iter_content(chunk_size=128):
+            for chunk in response.iter_content(chunk_size=8192):
                 temp_file.write(chunk)
 
         temp_path.replace(outfn)
